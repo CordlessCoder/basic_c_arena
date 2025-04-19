@@ -20,7 +20,6 @@ void *buffer_inner(Buffer *buf) {
 }
 
 
-// Initializing the arena does not allocate any memory
 Arena arena_init(void) {
     Arena arena = {0};
     return arena;
