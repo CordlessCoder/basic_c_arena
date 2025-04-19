@@ -28,14 +28,15 @@ Arena arena_init(void) {
 
 void *arena_alloc(Arena* arena, size_t size, size_t alignment) {
     if (!arena->buffer) {
+        size_t bsize = size;
         if (size < BUF_CAPACITY) {
-            size = BUF_CAPACITY;
+            bsize = BUF_CAPACITY;
         }
-        arena->buffer = new_buffer(size);
+        arena->buffer = new_buffer(bsize);
         arena->offset = 0;
     }
     // Handle allocations that can't fit in a buffer
-    if (size > BUF_CAPACITY) {
+    if (size > BUF_CAPACITY && (arena->buffer->capacity - arena->offset) != size) {
         Buffer *new = new_buffer(size);
         new->next = arena->buffer->next;
         arena->buffer->next = new;
@@ -45,16 +46,17 @@ void *arena_alloc(Arena* arena, size_t size, size_t alignment) {
     size_t end = (size_t)buffer_inner(arena->buffer) + arena->buffer->capacity;
     size_t available = end - (start + alignment - 1) / alignment * alignment;
     if (available < size) {
+        size_t bsize = size;
         if (size < BUF_CAPACITY) {
-            size = BUF_CAPACITY;
+            bsize = BUF_CAPACITY;
         }
-        Buffer *new = new_buffer(size);
+        Buffer *new = new_buffer(bsize);
         new->next = arena->buffer;
         arena->buffer = new;
         arena->offset = 0;
     }
     start = (size_t)buffer_inner(arena->buffer) + arena->offset;
-    arena->offset = (start + alignment - 1) / alignment * alignment - (size_t)buffer_inner(arena->buffer);
+    arena->offset += (start + alignment - 1) / alignment * alignment - start;
     void *ptr = (char *)buffer_inner(arena->buffer) + arena->offset;
     arena->offset += size;
     return ptr;
